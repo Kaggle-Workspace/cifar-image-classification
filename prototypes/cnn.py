@@ -1,19 +1,35 @@
 import os
-import re
-from keras_preprocessing.image.utils import validate_filename
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import tensorflow as tf
 from tensorflow import keras
-from tensorflow.keras import optimizers, regularizers
+from tensorflow._api.v2.compat.v1 import ConfigProto, InteractiveSession
+from tensorflow.keras import optimizers
 from tensorflow.keras.layers import (Activation, BatchNormalization, Conv2D,
                                      Dense, Dropout, Flatten, MaxPool2D)
-from tensorflow.keras.models import Sequential
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.python.keras.models import Model
-from tensorflow.python.keras.preprocessing.image import DirectoryIterator
+
+
+def fix_gpu():
+    config = ConfigProto()
+    config.gpu_options.allow_growth = True
+    session = InteractiveSession(config=config)
+
+
+gpus = tf.config.experimental.list_physical_devices('GPU')
+if gpus:
+    # Restrict TensorFlow to only allocate 1GB of memory on the first GPU
+    try:
+        tf.config.experimental.set_virtual_device_configuration(
+            gpus[0],
+            [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=1024)])
+        logical_gpus = tf.config.experimental.list_logical_devices('GPU')
+        print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPUs")
+    except RuntimeError as e:
+        # Virtual devices must be set before GPUs have been initialized
+        print(e)
 
 
 def append_ext(fn):
@@ -21,6 +37,7 @@ def append_ext(fn):
 
 
 def main():
+    fix_gpu()
     df_train = pd.read_csv(os.path.join(
         os.path.dirname(__file__), "../data/trainLabels.csv"), dtype=str)
     df_test = pd.read_csv(os.path.join(
@@ -109,12 +126,34 @@ def main():
     x = Flatten()(x)
     x = Dense(units=512, activation="relu")(x)
     x = Dropout(0.5)(x)
-    class_output = Dense(units=512, activation="softmax")(x)
+    class_output = Dense(units=10, activation="softmax")(x)
 
     model = Model(inputs=img_input, outputs=class_output)
     print(model.summary())
+    model.compile(optimizers.RMSprop(lr=0.0001, decay=1e-6),
+                  loss="categorical_crossentropy", metrics=["accuracy"])
     keras.utils.plot_model(model, os.path.join(
         os.path.dirname(__file__), "../output/convnet1.png"), show_shapes=True)
+
+    # Setting the step size
+    STEP_SIZE_TRAIN = train_generator.n//train_generator.batch_size
+    STEP_SIZE_VALID = validation_generator.n//validation_generator.batch_size
+    STEP_SIZE_TEST = test_generator.n//test_generator.batch_size
+
+    # model.fit(
+    #     train_generator,
+    #     steps_per_epoch=2000,
+    #     epochs=50,
+    #     validation_data=validation_generator,
+    #     validation_steps=800
+    # )
+
+    model.fit(train_generator,
+              steps_per_epoch=STEP_SIZE_TRAIN,
+              validation_data=validation_generator,
+              validation_steps=STEP_SIZE_VALID,
+              epochs=50
+              )
 
 
 if __name__ == '__main__':
