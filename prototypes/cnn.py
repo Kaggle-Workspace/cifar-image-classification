@@ -11,7 +11,6 @@ from tensorflow.keras.layers import (Activation, BatchNormalization, Conv2D,
 from tensorflow.keras.models import Model
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
-
 def fix_gpu():
     config = ConfigProto()
     config.gpu_options.allow_growth = True
@@ -39,9 +38,9 @@ def append_ext(fn):
 def main():
     fix_gpu()
     df_train = pd.read_csv(os.path.join(
-        os.path.dirname(__file__), "../data/trainLabels.csv"), dtype=str)
+        os.path.dirname(__file__), "../data/cifar-10/trainLabels.csv"), dtype=str)
     df_test = pd.read_csv(os.path.join(
-        os.path.dirname(__file__), "../data/sampleSubmission.csv"), dtype=str)
+        os.path.dirname(__file__), "../data/cifar-10/sampleSubmission.csv"), dtype=str)
 
     df_train["id"] = df_train["id"].apply(append_ext)
     df_test["id"] = df_test["id"].apply(append_ext)
@@ -49,8 +48,8 @@ def main():
     # print(df_train.sample(5))
 
     train_dir = validation_dir = os.path.join(
-        os.path.dirname(__file__), "../data/train/")
-    test_dir = os.path.join(os.path.dirname(__file__), "../data/test/")
+        os.path.dirname(__file__), "../data/cifar-10/train/")
+    test_dir = os.path.join(os.path.dirname(__file__), "../data/cifar-10/test/")
 
     train_datagen = ImageDataGenerator(
         rescale=1./255,
@@ -126,13 +125,15 @@ def main():
 
     x = Flatten()(x)
     x = Dense(units=512, activation="relu")(x)
-    x = Dropout(0.25)(x)
+    x = Dropout(0.5)(x)
     class_output = Dense(units=10, activation="softmax")(x)
 
     model = Model(inputs=img_input, outputs=class_output)
     print(model.summary())
-    model.compile(optimizers.RMSprop(lr=0.0001, decay=1e-6),
-                  loss="categorical_crossentropy", metrics=["accuracy"])
+    model.compile(
+        optimizers.Adam(lr=0.001, decay=1e-6),
+        loss="categorical_crossentropy",
+        metrics=["accuracy"])
     keras.utils.plot_model(model, os.path.join(
         os.path.dirname(__file__), "../output/convnet1.png"), show_shapes=True)
 
