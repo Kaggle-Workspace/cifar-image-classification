@@ -2,4 +2,4 @@
 
 # Model Architecture
 
-![Alternate Text](./output/convnet1.png)
+![Alternate Text](./resources/images/cnn1_model.png)
