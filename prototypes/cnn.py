@@ -8,8 +8,8 @@ from tensorflow._api.v2.compat.v1 import ConfigProto, InteractiveSession
 from tensorflow.keras import optimizers
 from tensorflow.keras.layers import (Activation, BatchNormalization, Conv2D,
                                      Dense, Dropout, Flatten, MaxPool2D)
+from tensorflow.keras.models import Model
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
-from tensorflow.python.keras.models import Model
 
 
 def fix_gpu():
@@ -55,14 +55,14 @@ def main():
     train_datagen = ImageDataGenerator(
         rescale=1./255,
         validation_split=0.2,
-        rotation_range=30,
-        width_shift_range=0.2,
-        height_shift_range=0.2,
-        horizontal_flip=True,
-        vertical_flip=True,
-        brightness_range=[0.4, 1.5],
-        zoom_range=0.3,
-        fill_mode="nearest"
+        # rotation_range=30,
+        # width_shift_range=0.2,
+        # height_shift_range=0.2,
+        # horizontal_flip=True,
+        # vertical_flip=True,
+        # brightness_range=[0.4, 1.5],
+        # zoom_range=0.3,
+        # fill_mode="nearest"
     )
     # aug_iter = datagen.flow(df_train["id"][0], )
 
@@ -87,6 +87,7 @@ def main():
         y_col="label",
         subset="validation",
         batch_size=32,
+        seed=42,
         shuffle=True,
         target_size=(32, 32),
         class_mode='categorical')
@@ -125,7 +126,7 @@ def main():
 
     x = Flatten()(x)
     x = Dense(units=512, activation="relu")(x)
-    x = Dropout(0.5)(x)
+    x = Dropout(0.25)(x)
     class_output = Dense(units=10, activation="softmax")(x)
 
     model = Model(inputs=img_input, outputs=class_output)
