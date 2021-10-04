@@ -7,9 +7,10 @@ from tensorflow import keras
 from tensorflow._api.v2.compat.v1 import ConfigProto, InteractiveSession
 from tensorflow.keras import optimizers
 from tensorflow.keras.layers import (Activation, BatchNormalization, Conv2D,
-                                     Dense, Dropout, Flatten, MaxPool2D)
+                                     Dense, Dropout, Flatten, MaxPool2D, AveragePooling2D)
 from tensorflow.keras.models import Model
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
+
 
 def fix_gpu():
     config = ConfigProto()
@@ -33,6 +34,9 @@ if gpus:
 
 def append_ext(fn):
     return str(str(fn) + ".png")
+    
+def remove_ext(fn):
+    return str(str(fn).rsplit('.', 1)[0])
 
 
 def main():
@@ -49,7 +53,8 @@ def main():
 
     train_dir = validation_dir = os.path.join(
         os.path.dirname(__file__), "../data/cifar-10/train/")
-    test_dir = os.path.join(os.path.dirname(__file__), "../data/cifar-10/test/")
+    test_dir = os.path.join(os.path.dirname(
+        __file__), "../data/cifar-10/test/")
 
     train_datagen = ImageDataGenerator(
         rescale=1./255,
@@ -79,7 +84,7 @@ def main():
         target_size=(32, 32),
         validate_filenames=True)
 
-    validation_generator = train_datagen.flow_from_dataframe(
+    valid_generator = train_datagen.flow_from_dataframe(
         directory=validation_dir,
         dataframe=df_train,
         x_col="id",
@@ -114,13 +119,13 @@ def main():
     x = Conv2D(filters=32, kernel_size=(3, 3),
                padding="same", activation="relu")(img_input)
     x = Conv2D(32, (3, 3), activation="relu")(x)
-    x = MaxPool2D(pool_size=(2, 2))(x)
+    x = AveragePooling2D(pool_size=(2, 2))(x)
     x = Dropout(0.25)(x)
 
     # Block Two
-    x = Conv2D(64, (3, 3), padding="same", activation="relu")(x)
+    # x = Conv2D(64, (3, 3), padding="same", activation="relu")(x)
     x = Conv2D(64, (3, 3), activation="relu")(x)
-    x = MaxPool2D(pool_size=(2, 2))(x)
+    x = AveragePooling2D(pool_size=(2, 2))(x)
     x = Dropout(0.25)(x)
 
     x = Flatten()(x)
@@ -131,31 +136,59 @@ def main():
     model = Model(inputs=img_input, outputs=class_output)
     print(model.summary())
     model.compile(
-        optimizers.Adam(lr=0.001, decay=1e-6),
+        optimizers.Adam(
+            lr=0.001,
+            # decay=1e-6
+        ),
         loss="categorical_crossentropy",
         metrics=["accuracy"])
     keras.utils.plot_model(model, os.path.join(
-        os.path.dirname(__file__), "../output/convnet1.png"), show_shapes=True)
+        os.path.dirname(__file__), "../resources/images/cnn1_model.png"), show_shapes=True)
 
     # Setting the step size
     STEP_SIZE_TRAIN = train_generator.n//train_generator.batch_size
-    STEP_SIZE_VALID = validation_generator.n//validation_generator.batch_size
+    STEP_SIZE_VALID = valid_generator.n//valid_generator.batch_size
     STEP_SIZE_TEST = test_generator.n//test_generator.batch_size
 
     # model.fit(
     #     train_generator,
     #     steps_per_epoch=2000,
     #     epochs=50,
-    #     validation_data=validation_generator,
+    #     validation_data=valid_generator,
     #     validation_steps=800
     # )
 
     model.fit(train_generator,
               steps_per_epoch=STEP_SIZE_TRAIN,
-              validation_data=validation_generator,
+              validation_data=valid_generator,
               validation_steps=STEP_SIZE_VALID,
-              epochs=50
+              epochs=1
               )
+
+    model.evaluate(
+        valid_generator,
+        steps=STEP_SIZE_VALID
+    )
+
+    test_generator.reset()
+    pred = model.predict(
+        test_generator,
+        steps=STEP_SIZE_TEST,
+        # verbose=1
+    )
+
+    predicted_class_indices = np.argmax(pred, axis=1)
+
+    labels = (train_generator.class_indices)
+    labels = dict((v, k) for k, v in labels.items())
+    predictions = [labels[k] for k in predicted_class_indices]
+    # Finally, save the results to a CSV file.
+    filenames = test_generator.filenames
+    results = pd.DataFrame({"id": filenames,
+                           "label": predictions})
+    results["id"] = results["id"].apply(remove_ext)
+    results.to_csv(os.path.join(
+        os.path.dirname(__file__), "../output/cnn1_pred.csv"), index=False)
 
 
 if __name__ == '__main__':
