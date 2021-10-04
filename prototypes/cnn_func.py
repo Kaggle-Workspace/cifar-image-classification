@@ -34,7 +34,8 @@ if gpus:
 
 def append_ext(fn):
     return str(str(fn) + ".png")
-    
+
+
 def remove_ext(fn):
     return str(str(fn).rsplit('.', 1)[0])
 
@@ -42,9 +43,9 @@ def remove_ext(fn):
 def main():
     fix_gpu()
     df_train = pd.read_csv(os.path.join(
-        os.path.dirname(__file__), "../data/cifar-10/trainLabels.csv"), dtype=str)
+        os.path.dirname(__file__), "../input/cifar-10/trainLabels.csv"), dtype=str)
     df_test = pd.read_csv(os.path.join(
-        os.path.dirname(__file__), "../data/cifar-10/sampleSubmission.csv"), dtype=str)
+        os.path.dirname(__file__), "../input/cifar-10/sampleSubmission.csv"), dtype=str)
 
     df_train["id"] = df_train["id"].apply(append_ext)
     df_test["id"] = df_test["id"].apply(append_ext)
@@ -52,9 +53,9 @@ def main():
     # print(df_train.sample(5))
 
     train_dir = validation_dir = os.path.join(
-        os.path.dirname(__file__), "../data/cifar-10/train/")
+        os.path.dirname(__file__), "../input/cifar-10/train/")
     test_dir = os.path.join(os.path.dirname(
-        __file__), "../data/cifar-10/test/")
+        __file__), "../input/cifar-10/test/")
 
     train_datagen = ImageDataGenerator(
         rescale=1./255,

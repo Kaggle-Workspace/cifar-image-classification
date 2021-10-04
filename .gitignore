@@ -4,6 +4,7 @@ build/
 data/
 dataset/
 datasets/
+input/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
